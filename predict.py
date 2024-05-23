@@ -12,6 +12,7 @@ from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
 MODEL_NAME = "facebook/mbart-large-50-many-to-many-mmt"
 MODEL_CACHE = "model-cache"
 TOKEN_CACHE = "token-cache"
+device = "cuda"
 
 #model = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
 #tokenizer = MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
@@ -35,7 +36,7 @@ class Predictor(BasePredictor):
             trust_remote_code=True,
             cache_dir=MODEL_CACHE
         )
-        self.model = model.to("cuda")
+        self.model = model.to(device)
 
     def predict(
         self,
@@ -62,7 +63,7 @@ class Predictor(BasePredictor):
 
         def doTranslate(sentence2translate):
             self.tokenizer.src_lang = sourceLanguage
-            encoded_hi = self.tokenizer(sentence2translate, return_tensors="pt")
+            encoded_hi = self.tokenizer(sentence2translate, return_tensors="pt").to(device)
             generated_tokens = self.model.generate(**encoded_hi, forced_bos_token_id= self.tokenizer.lang_code_to_id[targetLanguage])
             outputTranslate = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
             return outputTranslate
