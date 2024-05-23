@@ -53,12 +53,30 @@ class Predictor(BasePredictor):
             choices=["ar_AR", "cs_CZ", "de_DE", "en_XX", "es_XX", "et_EE", "fi_FI", "fr_XX", "gu_IN", "hi_IN", "it_IT", "ja_XX", "kk_KZ", "ko_KR", "lt_LT", "lv_LV", "my_MM", "ne_NP", "nl_XX", "ro_RO", "ru_RU", "si_LK", "tr_TR", "vi_VN", "zh_CN"],
             default="es_XX"
             ),
+        doSentenceLevelTranslation: bool = Input(
+            description="Translate at Sentence level? May be necessary for longer bodies of text.", 
+            default=False,
+            ),
     ) -> str:
         """Run a single prediction on the model"""
 
-        self.tokenizer.src_lang = sourceLanguage
-        encoded_hi = self.tokenizer(text2translate, return_tensors="pt")
-        generated_tokens = self.model.generate(**encoded_hi, forced_bos_token_id= self.tokenizer.lang_code_to_id[targetLanguage])
-        output = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+        def doTranslate(sentence2translate):
+            self.tokenizer.src_lang = sourceLanguage
+            encoded_hi = self.tokenizer(sentence2translate, return_tensors="pt")
+            generated_tokens = self.model.generate(**encoded_hi, forced_bos_token_id= self.tokenizer.lang_code_to_id[targetLanguage])
+            outputTranslate = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+            return outputTranslate
+
+        if doSentenceLevelTranslation:
+            text2translate = text2translate.replace("?", ".").replace("!", ".") #replace sentence delimiters
+            text2translateList = text2translate.split(". ") #space after period so we dont split on abbreviations
+
+            outputSentences = []
+            for i in text2translateList:
+                outputSentences.append(doTranslate(i))
+
+            output = '. '.join(outputSentences)
+        else:
+            output = doTranslate(text2translate)
 
         return output
